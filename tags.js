@@ -817,9 +817,7 @@ class Tags {
     }
     // Check already selected input (single will replace)
     if (!this.isSingle()) {
-     //mle: customized
        if(!this.freeTagMode && this._isSelected(text)){
-     //mle: end-customized
         return false;
       }
     }
