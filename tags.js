@@ -36,6 +36,10 @@ class Tags {
     // Handle options, using global settings first and data attr override
     const opts = { ...globalOpts, ...el.dataset };
     this.allowNew = opts.allowNew ? parseBool(opts.allowNew) : false;
+    //mle: customized
+    this.ignoreFirstOption = opts.ignoreFirstOption ? parseBool(opts.ignoreFirstOption) : true;
+    this.placeholderText = opts.placeholderText ? opts.placeholderText : "Type a Tag";
+    //mle: end-customized
     this.showAllSuggestions = opts.showAllSuggestions ? parseBool(opts.showAllSuggestions) : false;
     this.badgeStyle = opts.badgeStyle || "primary";
     this.allowClear = opts.allowClear ? parseBool(opts.allowClear) : false;
@@ -54,6 +58,9 @@ class Tags {
     this.valueField = opts.valueField || "value";
     this.labelField = opts.labelField || "label";
     this.keepOpen = opts.keepOpen ? parseBool(opts.keepOpen) : false;
+    //mle: customized
+    this.freeTagMode = opts.freeTagMode ? parseBool(opts.freeTagMode) : false;
+    //mle: end-customized
     this.fullWidth = opts.fullWidth ? parseBool(opts.fullWidth) : false;
     this.debounceTime = opts.debounceTime ? parseInt(opts.debounceTime) : 300;
 
@@ -95,7 +102,11 @@ class Tags {
     // Configure them
     this._configureHolderElement();
     this._configureDropElement();
+     //mle: customized
+    this._fireEvents = false;
     this._configureContainerElement();
+    this._fireEvents = true;
+     //mle: end-customized
     this._configureSearchInput();
     this.resetState();
 
@@ -224,16 +235,20 @@ class Tags {
       return this._selectElement.dataset.placeholder;
     }
     // Fallback to first option if no value
-    let firstOption = this._selectElement.querySelector("option");
-    if (!firstOption) {
-      return "";
-    }
-    if (firstOption.hasAttribute("selected")) {
-      firstOption.removeAttribute("selected");
-    }
-    return !firstOption.value ? firstOption.textContent : "";
-  }
 
+        let firstOption = this._selectElement.querySelector("option");
+        if (!firstOption) {
+          return "";
+        }
+    //mle: customized
+    if(!this.ignoreFirstOption){
+        if (firstOption.hasAttribute("selected")) {
+          firstOption.removeAttribute("selected");
+        }
+        return !firstOption.value ? firstOption.textContent : "";
+      }else return this.placeholderText;
+    }
+    //mle: end-customized
   _configureDropElement() {
     this._dropElement.classList.add(...["dropdown-menu", "p-0"]);
     this._dropElement.style.maxHeight = "280px";
@@ -275,7 +290,10 @@ class Tags {
     // we use selectedOptions because single select can have a selected option
     // without a selected attribute if it's the first value
     let initialValues = this._selectElement.selectedOptions;
-    for (let j = 0; j < initialValues.length; j++) {
+     //mle: customized need to store size because of growing by adding duplicate values
+    let valLength= initialValues.length;
+    for (let j = 0; j < valLength; j++) {
+     //mle: end-customized
       let initialValue = initialValues[j];
       if (!initialValue.value) {
         continue;
@@ -605,7 +623,9 @@ class Tags {
       link.classList.remove(...ACTIVE_CLASSES);
 
       // Hide selected values
-      if (values.indexOf(link.getAttribute(VALUE_ATTRIBUTE)) != -1) {
+       //mle: customized
+      if (!this.freeTagMode  && values.indexOf(link.getAttribute(VALUE_ATTRIBUTE)) != -1) {
+       //mle: end-customized
         item.style.display = "none";
         continue;
       }
@@ -796,8 +816,12 @@ class Tags {
       return false;
     }
     // Check already selected input (single will replace)
-    if (!this.isSingle() && this._isSelected(text)) {
-      return false;
+    if (!this.isSingle()) {
+     //mle: customized
+       if(!this.freeTagMode && this._isSelected(text)){
+     //mle: end-customized
+        return false;
+      }
     }
     // Check for max
     if (this.max && this.getSelectedValues().length >= this.max) {
@@ -885,7 +909,7 @@ class Tags {
     }
 
     // we need to create a new option
-    if (!opt) {
+    if (this.freeTagMode || !opt) {
       opt = document.createElement("option");
       opt.value = value;
       opt.textContent = text; // innerText is not well supported by jsdom
@@ -922,7 +946,9 @@ class Tags {
     if (opt) {
       opt.removeAttribute("selected");
       opt.selected = false;
-
+      //mle: end-customized
+      if(this.freeTagMode) opt.remove();
+      //mle: customized
       // Fire change event
       if (this._fireEvents && !noEvents) {
         this._selectElement.dispatchEvent(new Event("change", { bubbles: true }));
